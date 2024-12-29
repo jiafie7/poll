@@ -52,40 +52,56 @@ int main()
       else
       {
         int conn_fd = poller.getFd(i);
-        Socket client(conn_fd);
 
-        char buf[1024] = {0};
-        int len = client.recv(buf, sizeof(buf));
-
-        if (len < 0)
+        if (poller.isSet(i, POLLHUP))
         {
-          if (errno == EAGAIN || errno == EWOULDBLOCK)
+          log_error("socket hang up by peer: conn = %d.", conn_fd);
+          poller.delFd(conn_fd);
+          ::close(conn_fd);
+        }
+        else if (poller.isSet(i, POLLERR))
+        {
+          log_error("socket error: conn = %d.", conn_fd);
+          poller.delFd(conn_fd);
+          ::close(conn_fd);
+        }
+        else if (poller.isSet(i, POLLIN))
+        {
+          Socket client(conn_fd);
+
+          char buf[1024] = {0};
+          int len = client.recv(buf, sizeof(buf));
+
+          if (len < 0)
           {
-            log_debug("socket recv would block: conn = %d, errno = %d, errmsg = %s.", conn_fd, errno, strerror(errno));
+            if (errno == EAGAIN || errno == EWOULDBLOCK)
+            {
+              log_debug("socket recv would block: conn = %d, errno = %d, errmsg = %s.", conn_fd, errno, strerror(errno));
+            }
+            else if (errno == EINTR)
+            {
+              log_debug("socket recv interrupted: conn = %d, errno = %d, errmsg = %s.", conn_fd, errno, strerror(errno));
+            }
+            else
+            {
+              log_error("socket connection abort: conn = %d, errno = %d, errmsg = %s.", conn_fd, errno, strerror(errno));
+              poller.delFd(conn_fd);
+              client.close();
+            }
           }
-          else if (errno == EINTR)
+          else if (len == 0)
           {
-            log_debug("socket recv interrupted: conn = %d, errno = %d, errmsg = %s.", conn_fd, errno, strerror(errno));
-          }
-          else
-          {
-            log_error("socket connection abort: conn = %d, errno = %d, errmsg = %s.", conn_fd, errno, strerror(errno));
+            log_debug("socket closed by peer: conn = %d.", conn_fd); 
             poller.delFd(conn_fd);
             client.close();
           }
-        }
-        else if (len == 0)
-        {
-          log_debug("socket closed by peer: conn = %d.", conn_fd); 
-          poller.delFd(conn_fd);
-          client.close();
-        }
-        else
-        {
-          log_debug("recv: conn = %d, msg = %s", conn_fd, buf);
-
-          std::string msg = "hi, I am server!";
-          client.send(msg.c_str(), msg.size());
+          else
+          {
+            log_debug("recv: conn = %d, msg = %s", conn_fd, buf);
+            
+            std::string msg = "hi, I am server!";
+            client.send(msg.c_str(), msg.size());
+          }
         }
       }
     }
