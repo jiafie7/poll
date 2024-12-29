@@ -52,6 +52,10 @@ int main()
           log_error("server accept error: errno = %d, errmsg = %s.", errno, strerror(errno));
           continue;
         }
+
+        Socket socket(conn_fd);
+        socket.setNonBlocking();
+
         for (int j = 1; j < MAX_CONN; ++ j)
         {
           if (fds[j].fd == -1)

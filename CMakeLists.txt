@@ -12,3 +12,4 @@ file(GLOB_RECURSE SOURCES "utility/*.cpp" "socket/*.cpp")
 
 add_executable(server ${SOURCES} server.cpp)
 add_executable(client ${SOURCES} client.cpp)
+add_executable(poll_server ${SOURCES} poll_server.cpp)
