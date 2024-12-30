@@ -1,6 +1,8 @@
 #include "socket/socket_handler.h"
+#include "task/echo_task.h"
 
 using namespace melon::socket;
+using namespace melon::task;
 
 void SocketHandler::listen(const std::string& ip, int port)
 {
